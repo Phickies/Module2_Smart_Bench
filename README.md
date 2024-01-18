@@ -38,4 +38,5 @@ Requrire libary:
 ### Suggested Improvements:
 
 - **Debouncing Motion Sensor**: If your motion sensor is sensitive to small movements or prone to false triggering, you might want to implement a debouncing mechanism.
+- **Chaning light Color**: You could changing the light colors based on the weathers or anything creative.
 
