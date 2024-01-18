@@ -20,7 +20,7 @@ Requrire libary:
 
 4. **Light Control Logic**:
    - The light turns on if someone is seated or if there's recent motion, with a dimming effect applied in the latter case.
-   - `DIM_RATE` weigth the dim effect for the light, ranging from *0-1* wiht *1* is open full and *0* is off.
+   - `DIM_RATE` weigth the dim effect for the light, ranging from *0-1* with *1* is open full and *0* is off.
    - `STABILITY_WEIGHT` control the responsiviness and stability of the LDR sensor, max value is *50*, the higher value the more the sensor gonna stablizied more but trade off with responsiveness.
 
    - The light turns off if no motion is detected within the specified duration or if the ambient light is above the threshold.
