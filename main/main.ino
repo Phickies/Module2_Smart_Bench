@@ -13,7 +13,7 @@
 #define DIM_RATE 0.5
 #define STABILITY_WEIGHT 20
 #define LIGHT_THRESHOLD 250
-#define CAPACITIVE_THRESHOLD 200
+#define CAPACITIVE_THRESHOLD 10000
 #define LIGHT_ON_DURATION 30000
 #define INACTIVITY_TIMEOUT 60000
 
@@ -74,11 +74,14 @@ void handleMotionSensor() {
   if (digitalRead(MOTION_SENSOR_PIN) == HIGH)
   {
     inputLastDetectedAt = millis();
+    Serial.println("isMotioned");
   }
 }
 
 void handleCapaSensor() {
   long cs_value =  cs.capacitiveSensor(30);
+  Serial.print("Capacitive value: ");
+  Serial.println(cs_value);
   isSeated = (cs_value >= CAPACITIVE_THRESHOLD)
              ? true : false;
 }
@@ -93,6 +96,7 @@ void controlLightBasedOnSensor(unsigned int lightData) {
     else if (millis() - inputLastDetectedAt
              < LIGHT_ON_DURATION)
     {
+      Serial.print("Motion Inactive Time Left: ");
       Serial.println(millis() - inputLastDetectedAt);
       turnOnLight(lightData * DIM_RATE);
     }
@@ -104,6 +108,7 @@ void controlLightBasedOnSensor(unsigned int lightData) {
   else
   {
     turnOnLight(0);
+    inputLastDetectedAt = 0;
   }
 }
 
