@@ -1,16 +1,20 @@
 #include <avr/sleep.h>
 #include <CapacitiveSensor.h>
+#include <FastLED.h>
 
 #define LED_B_PIN 3
 #define LED_G_PIN 5
 #define LED_R_PIN 6
+
+#define LED_COUNT 98
+#define LED_PIN 12
 
 #define MOTION_SENSOR_PIN 2
 #define PHOTO_RESISTOR_PIN A0
 #define CAPACITIVE_PIN_IN 4
 #define CAPACITIVE_PIN_OUT 10
 
-#define DIM_RATE 0.5
+#define DIM_RATE 10
 #define STABILITY_WEIGHT 20
 #define LIGHT_THRESHOLD 250
 #define CAPACITIVE_THRESHOLD 10000
@@ -18,9 +22,9 @@
 #define INACTIVITY_TIMEOUT 60000
 
 CapacitiveSensor cs = CapacitiveSensor(
-                        CAPACITIVE_PIN_IN,
-                        CAPACITIVE_PIN_OUT
-                      );
+  CAPACITIVE_PIN_IN,
+  CAPACITIVE_PIN_OUT);
+CRGB leds[LED_COUNT];
 
 unsigned long inputLastDetectedAt = 0;
 unsigned long lastActivityTime = 0;
@@ -28,6 +32,8 @@ boolean isSeated = false;
 
 void setup() {
   Serial.begin(9600);
+
+  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, LED_COUNT);
 
   pinMode(LED_B_PIN, OUTPUT);
   pinMode(LED_G_PIN, OUTPUT);
@@ -38,8 +44,7 @@ void setup() {
   attachInterrupt(
     digitalPinToInterrupt(MOTION_SENSOR_PIN),
     wakeUp,
-    RISING
-  );
+    RISING);
 
   // Turnon auto calibration and time out
   // for capacitive sensor.
@@ -60,53 +65,44 @@ void loop() {
 
 unsigned int getLightData() {
   long sum = 0;
-  for (int j = 0; j < STABILITY_WEIGHT; j++)
-  {
+  for (int j = 0; j < STABILITY_WEIGHT; j++) {
     sum += analogRead(PHOTO_RESISTOR_PIN);
     delay(10);
   }
   int average = sum / STABILITY_WEIGHT;
-  return (average < LIGHT_THRESHOLD) ? 0 :
-         map(average, 0, 1023, 0, 255);
+  Serial.println(average);
+  return (average < LIGHT_THRESHOLD) ? 0 : map(average, 0, 1023, 0, 255);
 }
 
 void handleMotionSensor() {
-  if (digitalRead(MOTION_SENSOR_PIN) == HIGH)
-  {
+  if (digitalRead(MOTION_SENSOR_PIN) == HIGH) {
     inputLastDetectedAt = millis();
     Serial.println("isMotioned");
   }
 }
 
 void handleCapaSensor() {
-  long cs_value =  cs.capacitiveSensor(30);
+  long cs_value = cs.capacitiveSensor(30);
   Serial.print("Capacitive value: ");
   Serial.println(cs_value);
   isSeated = (cs_value >= CAPACITIVE_THRESHOLD)
-             ? true : false;
+               ? true
+               : false;
 }
 
 void controlLightBasedOnSensor(unsigned int lightData) {
-  if (lightData > 0)
-  {
-    if (isSeated)
-    {
+  if (lightData > 0) {
+    if (isSeated) {
       turnOnLight(lightData);
-    }
-    else if (millis() - inputLastDetectedAt
-             < LIGHT_ON_DURATION)
-    {
+    } else if (millis() - inputLastDetectedAt
+               < LIGHT_ON_DURATION) {
       Serial.print("Motion Inactive Time Left: ");
       Serial.println(millis() - inputLastDetectedAt);
-      turnOnLight(lightData * DIM_RATE);
-    }
-    else
-    {
+      turnOnLight(DIM_RATE);
+    } else {
       turnOnLight(0);
     }
-  }
-  else
-  {
+  } else {
     turnOnLight(0);
     inputLastDetectedAt = 0;
   }
@@ -114,17 +110,17 @@ void controlLightBasedOnSensor(unsigned int lightData) {
 
 void checkAndSleepIfInactive() {
   if (millis() - lastActivityTime
-      > INACTIVITY_TIMEOUT
-     )
-  {
+      > INACTIVITY_TIMEOUT) {
     goToSleep();
   }
 }
 
 void turnOnLight(int inputValue) {
-  analogWrite(LED_B_PIN, inputValue);
-  analogWrite(LED_G_PIN, inputValue);
-  analogWrite(LED_R_PIN, inputValue);
+  for (int i = 0; i < LED_COUNT; i++){
+    leds[i] = CRGB(255, 255, 255);
+    leds[i].maximizeBrightness(inputValue);
+  }
+  FastLED.show();  
   lastActivityTime = millis();
 }
 
