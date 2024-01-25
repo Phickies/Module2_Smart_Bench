@@ -15,7 +15,7 @@ Requrire libary:
    - `getLightData` averages the readings from the photoresistor.
    - `handleMotionSensor` updates the timestamp when motion is detected.
    - `handleCapaSensor` checks the capacitive sensor reading and updates the `isSeated` flag.
-   - `controlLightBasedOnSensor` controls the light based on sensor inputs and light data.
+   - `controlLightBasedOnSensor` controls the light based on sensor inputs and light data. This take parameter value from *0=255* as the power strength/brightness for the light.
    - `checkAndSleepIfInactive` puts the Arduino into sleep mode after a period of inactivity.
 
 4. **Light Control Logic**:
