@@ -14,7 +14,7 @@
 #define CAPACITIVE_PIN_IN 4
 #define CAPACITIVE_PIN_OUT 10
 
-#define DIM_LIGHT 10
+#define DIM_RATE 10
 #define STABILITY_WEIGHT 20
 #define LIGHT_THRESHOLD 250
 #define CAPACITIVE_THRESHOLD 10000
@@ -98,7 +98,7 @@ void controlLightBasedOnSensor(unsigned int lightData) {
                < LIGHT_ON_DURATION) {
       Serial.print("Motion Inactive Time Left: ");
       Serial.println(millis() - inputLastDetectedAt);
-      turnOnLight(DIM_LIGHT);
+      turnOnLight(DIM_RATE);
     } else {
       turnOnLight(0);
     }
@@ -116,11 +116,15 @@ void checkAndSleepIfInactive() {
 }
 
 void turnOnLight(int inputValue) {
-  for (int i = 0; i < LED_COUNT; i++){
-    leds[i] = CRGB(255, 255, 255);
-    leds[i].maximizeBrightness(inputValue);
+
+  for (int i = 0; i < inputValue; i++) {
+    for (int i = 0; i < LED_COUNT; i++) {
+      leds[i] = CRGB(255, 255, 255);
+      leds[i].maximizeBrightness(inputValue);
+    }
+    delay(10);
   }
-  FastLED.show();  
+  FastLED.show();
   lastActivityTime = millis();
 }
 
