@@ -20,20 +20,21 @@
 #endif
 
 #define LED_COUNT 98
-#define LED_PIN 12
+#define LED_PIN1 12
+#define LED_PIN2 13
 
 #define MOTION_SENSOR_PIN 2
 #define PHOTO_RESISTOR_PIN A0
 #define CAPACITIVE_PIN_IN 4
 #define CAPACITIVE_PIN_OUT 10
 
-#define LIGHT_COLOR CRGB(255, 255, 255)  // Light color (R,G,B)
-#define DIM_RATE 2                       // factor to full brightness
+// #define LIGHT_COLOR CRGB(255, 255, 0)  // Light color (R,G,B)
+#define DIM_RATE 4  // factor to full brightness
 
-#define STABILITY_WEIGHT 20
+#define STABILITY_WEIGHT 30
 #define LIGHT_THRESHOLD 250
-#define CAPACITIVE_THRESHOLD 10000
-#define LIGHT_ON_DURATION 30000
+#define CAPACITIVE_THRESHOLD 5000
+#define LIGHT_ON_DURATION 5000
 #define INACTIVITY_TIMEOUT 60000
 
 CapacitiveSensor cs = CapacitiveSensor(
@@ -43,8 +44,10 @@ CRGB leds[LED_COUNT];
 
 unsigned long motionTimeLastDetected;
 unsigned long lastActivityTime;
-CRGB* color = &LIGHT_COLOR;
+uint8_t preValue;
+// CRGB* color = &LIGHT_COLOR;
 bool isSeated = false;
+bool isMotioned = false;
 
 void setup() {
 #if DEBUG
@@ -53,7 +56,10 @@ void setup() {
   PRINTS("\n[START PROGRAM]");
 
   // Initilized LED object and set up pin.
-  FastLED.addLeds<WS2812, LED_PIN, GRB>(leds, LED_COUNT);
+  FastLED.addLeds<WS2812, LED_PIN1, GRB>(leds, LED_COUNT);
+  FastLED.addLeds<WS2812, LED_PIN2, GRB>(leds, LED_COUNT);
+  FastLED.clear();
+  FastLED.setBrightness(250);
 
   // Setup sensor pins.
   pinMode(MOTION_SENSOR_PIN, INPUT);
@@ -90,13 +96,19 @@ uint8_t getLightData() {
   }
   int average = sum / STABILITY_WEIGHT;
   PRINT("Average Light Ambient: ", average);
-  return (average < LIGHT_THRESHOLD) ? 0 : map(average, 0, 1023, 0, 255);
+  return (average < LIGHT_THRESHOLD) ? 0 : map(average, 0, 1023, 0, 250);
 }
 
 void handleMotionSensor() {
   if (digitalRead(MOTION_SENSOR_PIN) == HIGH) {
     motionTimeLastDetected = millis();
+    isMotioned = true;
     PRINTS("\n[MOTION DETECTED]");
+  } else if (millis() - motionTimeLastDetected < LIGHT_ON_DURATION) {
+    PRINT("Time wait till the last motion detected: ",
+          millis() - motionTimeLastDetected);
+  } else if (millis() - motionTimeLastDetected < LIGHT_ON_DURATION) {
+    isMotioned = false;
   }
 }
 
@@ -109,15 +121,12 @@ void handleCapaSensor() {
 }
 
 void controlLightBasedOnSensor(unsigned int lightData) {
-  if (!isSeated) {
-    turnOnLight(0, color);
-  } else if (!isSeated
-             && millis() - motionTimeLastDetected < LIGHT_ON_DURATION) {
-    PRINT("Time wait till the last motion detected: ",
-          millis() - motionTimeLastDetected);
-    turnOnLight(lightData / DIM_RATE, color);
+  if (!isSeated && !isMotioned) {
+    turnOnLight(0);
+  } else if (!isSeated && isMotioned) {
+    turnOnLight(lightData / DIM_RATE);
   } else {
-    turnOnLight(lightData, color);
+    turnOnLight(lightData);
   }
 }
 
@@ -127,27 +136,43 @@ void checkAndSleepIfInactive() {
   }
 }
 
-void turnOnLight(uint8_t inputValue, CRGB* light_color) {
-  if (inputValue == 0) {
-    return;
+void turnOnLight(uint8_t inputValue) {
+  if (preValue != inputValue) {
+    fadeAnimation(preValue, inputValue);
+    lastActivityTime = millis();
+  } else {
+    for (int i = 0; i < LED_COUNT; i++) {
+      leds[i].setRGB(inputValue, inputValue, inputValue);
+    }
+    FastLED.show();
   }
-  fadeAnimation(inputValue);
-  FastLED.showColor(light_color);
-  lastActivityTime = millis();
+
+  preValue = leds[0].getLuma();
+  if (inputValue != 0) {
+    lastActivityTime = millis();
+  }
 }
 
-void fadeAnimation(uint8_t inputValue) {
-  uint8_t curVal = FastLED.getBrightness();
+void fadeAnimation(uint8_t preValue, uint8_t inputValue) {
 #if DEBUG
-  PRINT("Light brightness value: ", curVal);
+  PRINT("Light brightness value: ", preValue);
 #endif
-  while (curVal < inputValue) {
-    FastLED.setBrightness(curVal++);
-    delay(5);
-  }
-  while (curVal > inputValue) {
-    FastLED.setBrightness(curVal--);
-    delay(5);
+  if (preValue < inputValue) {
+    for (int i = preValue; i <= inputValue; i++) {
+      for (int j = 0; j < LED_COUNT; j++) {
+        leds[j].setRGB(i, i, i);
+      }
+      delay(5);
+      FastLED.show();
+    }
+  } else {
+    for (int i = preValue; i >= inputValue; i--) {
+      for (int j = 0; j < LED_COUNT; j++) {
+        leds[j].setRGB(i, i, i);
+      }
+      delay(5);
+      FastLED.show();
+    }
   }
 }
 
